@@ -10,7 +10,8 @@ import lombok.Setter;
 public class Course {
 
     @Id
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     private String title;
 

@@ -10,7 +10,8 @@ import lombok.Setter;
 public class Video {
 
     @Id
-    private String videoId;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long videoId;
     private String title;
     private String description;
     private String contentType;
