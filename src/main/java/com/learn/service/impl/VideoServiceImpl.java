@@ -30,7 +30,7 @@ public class VideoServiceImpl implements VideoService {
     private String DIR;
 
     @Value("${files.video.hsl}")
-    private String HSL_DIR;
+    private String HLS_DIR;
 
     private final VideoRepository videoRepository;
     private final VideoHLS videoHLS;

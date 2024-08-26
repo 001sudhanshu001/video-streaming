@@ -5,6 +5,7 @@ import com.learn.dto.response.ResponseDto;
 import com.learn.entity.Video;
 import com.learn.service.VideoService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
@@ -19,16 +20,22 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.RandomAccessFile;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/videos")
 @RequiredArgsConstructor
 public class VideoController {
+
+    @Value("${files.video.hsl}")
+    private String HLS_DIR;
+
+    private static final List<String> ALLOWED_RESOLUTIONS = Arrays.asList("360p", "720p", "1080p");
+    private static final String DEFAULT_RESOLUTION = "360p";
 
     private final VideoService videoService;
 
@@ -186,12 +193,64 @@ public class VideoController {
         return videoService.getAll();
     }
 
-    @GetMapping("/process/{videoId}")
+   // @GetMapping("/process/{videoId}")
     public String processVideo(@PathVariable Long videoId) {
         videoService.processVideo(videoId);
 
         return "The Files are being Processed";
     }
+
+    @GetMapping("/{videoId}/master.m2u8") // This API will be used to stream the segments
+    public ResponseEntity<Resource> serverMasterFile(
+            @PathVariable String videoId,
+            @RequestHeader(value = "Accept-Resolution", defaultValue = DEFAULT_RESOLUTION) String resolution) {
+        if (!ALLOWED_RESOLUTIONS.contains(resolution)) {
+            resolution = DEFAULT_RESOLUTION;
+        }
+
+        Path path = Paths.get(HLS_DIR, videoId, resolution, "playlist.m3u8");
+        System.out.println("PATH IS " + path);
+
+        if(!Files.exists(path)) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+
+        Resource resource = new FileSystemResource(path);
+
+        return ResponseEntity.ok()
+                .header(
+                        HttpHeaders.CONTENT_TYPE, "application/vnd.apple.mpegurl"
+                )
+                .body(resource);
+
+    }
+
+    @GetMapping("/{videoId}/{segment}.ts")
+    public ResponseEntity<Resource> serveSegments(@PathVariable String videoId,
+                                                  @PathVariable String segment,
+                                                  @RequestHeader(value = "Accept-Resolution",
+                                                          defaultValue = DEFAULT_RESOLUTION) String resolution) {
+
+        if (!ALLOWED_RESOLUTIONS.contains(resolution)) {
+            resolution = DEFAULT_RESOLUTION;
+        }
+
+        Path path = Paths.get(HLS_DIR, videoId, resolution, segment + ".ts");
+        if (!Files.exists(path)) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+
+        Resource resource = new FileSystemResource(path);
+
+        return ResponseEntity
+                .ok()
+                .header(
+                        HttpHeaders.CONTENT_TYPE, "video/mp2t"
+                )
+                .body(resource);
+
+    }
+
 
     // Complete Video at once : Not a good Idea
     public ResponseEntity<Resource> stream(@PathVariable Long videoId) {

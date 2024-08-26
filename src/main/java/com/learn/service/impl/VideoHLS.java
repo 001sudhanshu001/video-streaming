@@ -18,7 +18,7 @@ import java.nio.file.Paths;
 public class VideoHLS {
 
     @Value("${files.video.hsl}")
-    private String HSL_DIR;
+    private String HLS_DIR;
 
     private final VideoRepository videoRepository;
 
@@ -30,9 +30,9 @@ public class VideoHLS {
         Path videoPath = Paths.get(fileAddress);
 
         // Output directories for different resolutions
-        String outputDir360p = HSL_DIR + videoId + "/360p";
-        String outputDir720p = HSL_DIR + videoId + "/720p";
-        String outputDir1080p = HSL_DIR + videoId + "/1080p";
+        String outputDir360p = HLS_DIR + videoId + "/360p";
+        String outputDir720p = HLS_DIR + videoId + "/720p";
+        String outputDir1080p = HLS_DIR + videoId + "/1080p";
 
         try {
             // Create directories for each resolution
