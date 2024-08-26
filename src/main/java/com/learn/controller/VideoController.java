@@ -1,6 +1,7 @@
 package com.learn.controller;
 
 import com.learn.dto.response.CustomMessage;
+import com.learn.dto.response.ResponseDto;
 import com.learn.entity.Video;
 import com.learn.service.VideoService;
 import lombok.RequiredArgsConstructor;
@@ -45,8 +46,14 @@ public class VideoController {
         Video savedVideo = videoService.save(video, file);
 
         if (savedVideo != null) {
-            return ResponseEntity.status(HttpStatus.OK).body(video);
+            System.out.println("SUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU");
+            return ResponseEntity.status(HttpStatus.OK)
+                    .body(ResponseDto.builder()
+                            .video(savedVideo)
+                            .message("Video is Being Processed for multiple Resolutions, It may take some time")
+                            .build());
         }
+
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(CustomMessage.builder()
                         .message("Something went Wrong !!!")
@@ -59,7 +66,8 @@ public class VideoController {
     // Without Range, Sending in Chunks
     @GetMapping("/stream/s/{videoId}")
     public ResponseEntity<StreamingResponseBody> streaming(@PathVariable Long videoId,
-                                                           @RequestHeader HttpHeaders headers) throws IOException {
+                                                           @RequestHeader HttpHeaders headers)
+                                                           throws IOException {
 
         Video video = videoService.get(videoId);
         String contentType = video.getContentType();
@@ -87,7 +95,8 @@ public class VideoController {
 
 
     @GetMapping("/stream/range/{videoId}")
-    public ResponseEntity<Resource> streamVideoRange(@PathVariable Long videoId, @RequestHeader(value = "Range", required = false) String range) {
+    public ResponseEntity<Resource> streamVideoRange(@PathVariable Long videoId,
+                                                     @RequestHeader(value = "Range", required = false) String range) {
         System.out.println(range);
         //
 
@@ -176,6 +185,13 @@ public class VideoController {
     @GetMapping
     public List<Video> getAll() {
         return videoService.getAll();
+    }
+
+    @GetMapping("/process/{videoId}")
+    public String processVideo(@PathVariable Long videoId) {
+        videoService.processVideo(videoId);
+
+        return "The Files are being Processed";
     }
 
     /**************************************************************************/

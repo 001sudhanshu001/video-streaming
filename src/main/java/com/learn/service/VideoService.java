@@ -14,4 +14,6 @@ public interface VideoService {
 
     List<Video> getAll();
 
+    void processVideo(Long videoId);
+
 }
