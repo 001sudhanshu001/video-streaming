@@ -46,7 +46,6 @@ public class VideoController {
         Video savedVideo = videoService.save(video, file);
 
         if (savedVideo != null) {
-            System.out.println("SUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU");
             return ResponseEntity.status(HttpStatus.OK)
                     .body(ResponseDto.builder()
                             .video(savedVideo)
@@ -193,85 +192,6 @@ public class VideoController {
 
         return "The Files are being Processed";
     }
-
-    /**************************************************************************/
-
-    // TODO - Debug
-    @GetMapping("/stream/{videoId}")
-    public ResponseEntity<StreamingResponseBody> stream(@PathVariable Long videoId,
-                                                        @RequestHeader HttpHeaders headers) throws IOException {
-        Video video = videoService.get(videoId);
-        String contentType = video.getContentType();
-        if (contentType == null) {
-            contentType = "application/octet-stream";
-        }
-        String filePath = video.getFilePath();
-
-        Path path = Paths.get(filePath);
-        long fileLength = Files.size(path);
-        String rangeHeader = headers.getFirst(HttpHeaders.RANGE);
-
-        if (rangeHeader != null && rangeHeader.startsWith("bytes=")) {
-            // Handling for range requests
-            String[] ranges = rangeHeader.substring(6).split("-");
-            long start = Long.parseLong(ranges[0]);
-            long end = (ranges.length > 1 && !ranges[1].isEmpty()) ? Long.parseLong(ranges[1]) : fileLength - 1;
-
-            if (start > end || start >= fileLength) {
-                return ResponseEntity.status(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE).build();
-            }
-
-            long contentLength = end - start + 1;
-            HttpHeaders responseHeaders = new HttpHeaders();
-            responseHeaders.add(HttpHeaders.CONTENT_TYPE, contentType);
-            responseHeaders.add(HttpHeaders.CONTENT_RANGE, "bytes " + start + "-" + end + "/" + fileLength);
-            responseHeaders.add(HttpHeaders.ACCEPT_RANGES, "bytes");
-
-            StreamingResponseBody stream = outputStream -> {
-                try (RandomAccessFile raf = new RandomAccessFile(path.toFile(), "r")) {
-                    raf.seek(start);
-                    byte[] buffer = new byte[4096]; // Larger buffer size
-                    int bytesRead;
-                    while ((bytesRead = raf.read(buffer)) != -1) {
-                        if (raf.getFilePointer() > end) {
-                            break;
-                        }
-                        outputStream.write(buffer, 0, bytesRead);
-                    }
-                    outputStream.flush();
-                } catch (IOException e) {
-                    throw new RuntimeException("Error while streaming file", e);
-                }
-            };
-
-            return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
-                    .headers(responseHeaders)
-                    .body(stream);
-        } else {
-            // Full content response
-            HttpHeaders responseHeaders = new HttpHeaders();
-            responseHeaders.add(HttpHeaders.CONTENT_TYPE, contentType);
-            responseHeaders.add(HttpHeaders.CONTENT_LENGTH, String.valueOf(fileLength));
-
-            StreamingResponseBody stream = outputStream -> {
-                try (InputStream inputStream = new FileInputStream(path.toFile())) {
-                    byte[] buffer = new byte[4096]; // Larger buffer size
-                    int bytesRead;
-                    while ((bytesRead = inputStream.read(buffer)) != -1) {
-                        outputStream.write(buffer, 0, bytesRead);
-                    }
-                    outputStream.flush();
-                } catch (IOException e) {
-                    throw new RuntimeException("Error while streaming file", e);
-                }
-            };
-
-            return ResponseEntity.ok()
-                    .headers(responseHeaders)
-                    .body(stream);
-        }
-    }
-
 
     // Complete Video at once : Not a good Idea
     public ResponseEntity<Resource> stream(@PathVariable Long videoId) {
